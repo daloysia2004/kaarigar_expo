@@ -9,7 +9,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name     = trim($_POST['name']);
     $email    = trim($_POST['email']);
     $password = $_POST['password'];
-    $role     = $_POST['role']; // 'visitor' or 'kaarigar'
+    // Fallback/normalize role input to lowercase 'visitor' if empty or invalid
+    $role     = strtolower(trim($_POST['role'] ?? 'visitor'));
+    if (!in_array($role, ['visitor', 'kaarigar'])) {
+        $role = 'visitor';
+    }
 
     // Validation
     if (empty($name) || empty($email) || empty($password) || empty($role)) {

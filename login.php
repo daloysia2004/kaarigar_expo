@@ -11,37 +11,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = "Please enter both email and password.";
     } else {
-        // Query to check user across ALL roles
-        $stmt = $conn->prepare("SELECT id, name, email, password, role FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT id, name, email, password, role FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($result && $result->num_rows === 1) {
             $user = $result->fetch_assoc();
+            $user_id = $user['id'];
+            $stored_hash = $user['password'];
 
-            // Verify password (supports hashed passwords from register.php as well as plain text fallback)
-            if (password_verify($password, $user['password']) || $password === $user['password']) {
-                // Set Session Variables
+            $is_valid = false;
+
+            // 1. Check standard BCrypt hash
+            if (password_verify($password, $stored_hash)) {
+                $is_valid = true;
+            } 
+            // 2. Fallback check for unhashed plain text passwords (and convert them to secure hashes)
+            elseif ($password === $stored_hash) {
+                $is_valid = true;
+                $new_hash = password_hash($password, PASSWORD_BCRYPT);
+                $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+                $update_stmt->bind_param("si", $new_hash, $user_id);
+                $update_stmt->execute();
+                $update_stmt->close();
+            }
+
+            if ($is_valid) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['name']    = $user['name'];
                 $_SESSION['email']   = $user['email'];
-                $_SESSION['role']    = strtolower($user['role']);
+                $_SESSION['role']    = strtolower(trim($user['role']));
 
-                // Role-based Redirection
                 if ($_SESSION['role'] === 'admin') {
                     header("Location: admin.php");
-                } elseif ($_SESSION['role'] === 'kaarigar') {
-                    header("Location: kaarigar_dashboard.php");
                 } else {
-                    // Visitors or Default users
                     header("Location: index.php");
                 }
                 exit();
             } else {
+                // Wrong password entered
                 $error = "Invalid email or password.";
             }
         } else {
+            // Email not found
             $error = "Invalid email or password.";
         }
         $stmt->close();

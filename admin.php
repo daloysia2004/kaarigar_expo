@@ -15,11 +15,27 @@ $melas = $conn->query("SELECT * FROM melas ORDER BY event_date DESC");
 $kaarigars = $conn->query("SELECT u.name, u.email, kp.craft_type, kp.description, kp.photo 
                             FROM users u 
                             LEFT JOIN kaarigar_profiles kp ON u.id = kp.user_id 
-                            WHERE u.role = 'kaarigar' 
+                            WHERE LOWER(u.role) = 'kaarigar' 
                             ORDER BY u.created_at DESC");
 
-// Fetch registered Visitors
-$visitors = $conn->query("SELECT name, email, created_at FROM users WHERE role = 'visitor' ORDER BY created_at DESC");
+
+// Fetch registered Visitors with Event RSVPs
+$visitors_query = "SELECT 
+                    u.id, 
+                    u.name, 
+                    u.email, 
+                    u.created_at, 
+                    GROUP_CONCAT(m.title SEPARATOR ', ') AS event_names
+                   FROM users u
+                   LEFT JOIN visitor_rsvps vr ON u.id = vr.visitor_id
+                   LEFT JOIN melas m ON vr.mela_id = m.id
+                   WHERE LOWER(u.role) = 'visitor' 
+                      OR u.role IS NULL 
+                      OR u.role = ''
+                   GROUP BY u.id
+                   ORDER BY u.id DESC";
+
+$visitors = $conn->query($visitors_query);
 
 // Fetch mela stall applications
 $applications = $conn->query("SELECT ma.id, u.name AS kaarigar_name, m.title AS mela_title, ma.status, ma.applied_at 
@@ -187,31 +203,40 @@ $applications = $conn->query("SELECT ma.id, u.name AS kaarigar_name, m.title AS 
             <!-- 4. Registered Visitors Tab -->
             <div class="tab-pane fade" id="visitors" role="tabpanel">
                 <div class="card border-0 shadow-sm p-4">
-                    <h5 class="fw-bold mb-3 border-bottom pb-2">👤 Registered Visitors</h5>
+                    <h5 class="fw-bold mb-3 border-bottom pb-2">👤 Registered Visitors & RSVPs</h5>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
                                     <th>Name</th>
                                     <th>Email</th>
-                                    <th>Registered Date</th>
+                                    <th>Registered Event</th>
+                                    <th>Registration Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php
-                                if ($visitors && $visitors->num_rows > 0) {
-                                    while ($v = $visitors->fetch_assoc()) {
-                                        $regDate = !empty($v['created_at']) ? date("Y-m-d", strtotime($v['created_at'])) : 'N/A';
-                                        echo '<tr>
-                                            <td class="fw-bold">'.htmlspecialchars($v['name']).'</td>
-                                            <td>'.htmlspecialchars($v['email']).'</td>
-                                            <td>'.htmlspecialchars($regDate).'</td>
-                                        </tr>';
-                                    }
-                                } else {
-                                    echo '<tr><td colspan="3" class="text-center text-muted py-4">No visitors registered yet.</td></tr>';
-                                }
-                                ?>
+if ($visitors && $visitors->num_rows > 0) {
+    while ($v = $visitors->fetch_assoc()) {
+        $regDate = !empty($v['created_at']) ? date("Y-m-d", strtotime($v['created_at'])) : 'N/A';
+        
+        if (!empty($v['event_names'])) {
+            $eventName = '<span class="badge bg-success">'.htmlspecialchars($v['event_names']).'</span>';
+        } else {
+            $eventName = '<span class="badge bg-secondary">No Event RSVP</span>';
+        }
+        
+        echo '<tr>
+            <td class="fw-bold">'.htmlspecialchars($v['name']).'</td>
+            <td>'.htmlspecialchars($v['email']).'</td>
+            <td>'.$eventName.'</td>
+            <td>'.htmlspecialchars($regDate).'</td>
+        </tr>';
+    }
+} else {
+    echo '<tr><td colspan="4" class="text-center text-muted py-4">No visitors registered yet.</td></tr>';
+}
+?>
                             </tbody>
                         </table>
                     </div>

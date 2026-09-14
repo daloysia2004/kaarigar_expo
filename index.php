@@ -65,8 +65,22 @@ if ($kaarigar_query && $kaarigar_query->num_rows > 0) {
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="container py-5" id="events-section">
+    <!-- Alert Notification Banner -->
+    <?php if (isset($_SESSION['msg'])): ?>
+        <div class="container mt-3">
+            <div class="alert alert-<?php echo isset($_SESSION['msg_type']) ? $_SESSION['msg_type'] : 'info'; ?> alert-dismissible fade show text-center shadow-sm" role="alert">
+                <strong><?php echo $_SESSION['msg']; ?></strong>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+        <?php 
+        unset($_SESSION['msg']); 
+        unset($_SESSION['msg_type']); 
+        ?>
+    <?php endif; ?>
+
+    <!-- Main Content Container -->
+    <div id="events-section" class="container py-5">
         <div class="text-center mb-5">
             <h2 class="fw-bold">Upcoming Melas & Exhibitions</h2>
             <p class="text-muted">Explore events, discover artisans, and attend live exhibitions.</p>
@@ -96,12 +110,13 @@ if ($kaarigar_query && $kaarigar_query->num_rows > 0) {
                                 </p>
                                 
                                 <div class="d-grid gap-2 mt-3">
-                                    <!-- View Details Button (Triggers Modal) -->
+                                    <!-- View Details Button -->
                                     <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#melaModal<?php echo $mela_id; ?>">
                                         🔍 View Details & Kaarigars
                                     </button>
                                     
-                                    <a href="mela_details.php?id=<?php echo $mela_id; ?>" class="btn btn-outline-danger btn-sm">RSVP / Apply Now</a>
+                                    <!-- Fixed Parameter: mela_id -->
+                                    <a href="rsvp_action.php?mela_id=<?php echo $mela_id; ?>" class="btn btn-outline-danger btn-sm">RSVP / Apply Now</a>
                                 </div>
                             </div>
                         </div>
