@@ -44,7 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['role']    = strtolower(trim($user['role']));
 
                 if ($_SESSION['role'] === 'admin') {
-                    header("Location: admin.php");
+                    header("Location: admin.php"); }
+                    else if  ($_SESSION['role'] === 'kaarigar') {
+                    header("Location: kaarigar_dashboard.php");
                 } else {
                     header("Location: index.php");
                 }
